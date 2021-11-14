@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Parser</title>
+    <link rel="stylesheet" href="./styles/css-reset.css">
+    <link rel="stylesheet" href="./styles/styles.css">
+    <script src="data.js"></script>
+    <script src="env.js"></script>
+  </head>
+  <body>
+    <div id="container">
+      <div id="menu-items">
+        <button id="pre-filter" type="button">Pre filter</button>
+        <button id="manual-filter" class="active" type="button">Manual filter</button>
+        <button id="results" type="button">Results</button>
+      </div>
+      <div id="display"></div>
+    </div>
+    <script>
+      const entries = data; // imported above
+      const entriesLength = entries.length;
+      const entryWeights = {}; // date: weight
+      const filters = []; // strings stripped out of sample
+      const preFilterBtn = document.getElementById('pre-filter');
+      const manualFilterBtn = document.getElementById('manual-filter');
+      const resultsBtn = document.getElementById('results');
+      const display = document.getElementById('display');
+
+      const preFilterHtml = `<h3>Enter filters separated by line breaks</h3>
+        <textarea id="pre-filter-text"></textarea>
+        <button id="update-pre-filter" type="button">update</button>`;
+
+      const manualFilterHtml = `<span class="processed-counter">entry 1/1238</span>
+        <h2 id="active-word" class="active-word"></h2>
+        <p id="entry"></p>
+        <div class="manual-filter-btns">
+          <button id="negative" type="button">Negative</button>
+          <button id="neutral" type="button">Neutral</button>
+          <button id="positive" type="button">Positive</button>
+        </div>`;
+      
+      let activeTab = 'manual-filter'; // id of tab button
+      let processedEntries = 0;
+
+      // setup manual filter body
+      display.innerHTML = manualFilterHtml; // yes you would not want to do this if stored eg. XSS
+
+      // bind elements
+      const negativeBtn = document.getElementById('negative'); // hungarian
+      const neutralBtn = document.getElementById('neutral');
+      const positiveBtn = document.getElementById('positive');
+      const activeWord = document.getElementById('active-word');
+      const activeEntry = document.getElementById('entry');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+      // sample string
+      // On Feb 18, 2018 11:17 PM
+
+      console.log(entries);
+
+      const findWhichMonth = (entry) => {
+        for (let i = 0; i < months.length; i++) {
+          if (entry.indexOf(`On ${months[i]}`) !== -1) {
+            return months[i];
+            break;
+          }
+        }
+      }
+
+      const preFilterEntry = (entry) => {
+        if (entry.indexOf(filterStrings[0]) !== -1) {
+          const entryMonth = findWhichMonth(entry);
+
+        } else {
+          return entry;
+        }
+      }
+
+      // start the process
+
+      
+    </script>
+  </body>
+</html>

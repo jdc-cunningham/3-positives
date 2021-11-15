@@ -9,37 +9,47 @@
     <link rel="stylesheet" href="./styles/styles.css">
     <script src="data.js"></script>
     <script src="env.js"></script>
+    <script src="remove.js"></script>
+    <script src="weightedEntriesFile.js"></script>
   </head>
   <body>
     <div id="container">
       <div id="menu-items">
         <button id="pre-filter" type="button">Pre filter</button>
-        <button id="manual-filter" class="active" type="button">Manual filter</button>
-        <button id="results" type="button">Results</button>
+        <button id="manual-filter" type="button">Manual filter</button>
+        <button id="results" class="active" type="button">Results</button>
       </div>
       <div id="display"></div>
     </div>
     <script>
-      const entries = data; // imported above
+      // initialize local storage
+      if (!localStorage.getItem('entries')) {
+        localStorage.setItem('entries', JSON.stringify(data));
+      }
+      
+      const entries = JSON.parse(localStorage.getItem('entries')); // imported above
       const entriesLength = entries.length;
-      const entryWeights = {}; // date: weight
+      const weightedEntries = JSON.parse(localStorage.getItem('weighted-entries')) || {}; // date: weight
       const filters = []; // strings stripped out of sample
       const preFilterBtn = document.getElementById('pre-filter');
       const manualFilterBtn = document.getElementById('manual-filter');
       const resultsBtn = document.getElementById('results');
       const display = document.getElementById('display');
 
+      if (!localStorage.getItem('weighted-entries')) {
+        localStorage.setItem('weighted-entries', JSON.stringify({}));
+      }
+
       const preFilterHtml = `<h3>Enter filters separated by line breaks</h3>
         <textarea id="pre-filter-text"></textarea>
         <button id="update-pre-filter" type="button">update</button>`;
 
-      const manualFilterHtml = `<span class="processed-counter">entry 1/1238</span>
+      const manualFilterHtml = `<span id="weight-progress" class="processed-counter">entry 1/1238</span>
         <h2 id="active-word" class="active-word"></h2>
         <p id="entry"></p>
-        <div class="manual-filter-btns">
-          <button id="negative" type="button">Negative</button>
-          <button id="neutral" type="button">Neutral</button>
-          <button id="positive" type="button">Positive</button>
+        <div class="manual-filter-input">
+          <input type="number" id="entry-weight" min="-3" max="3"/>
+          <button type="button" id="next-entry">Next</button>
         </div>`;
       
       let activeTab = 'manual-filter'; // id of tab button
@@ -47,7 +57,7 @@
       let activeEntryWords = []; // fill, unshift as processed
 
       // setup manual filter body
-      display.innerHTML = manualFilterHtml; // yes you would not want to do this if stored eg. XSS
+      // display.innerHTML = manualFilterHtml; // yes you would not want to do this if stored eg. XSS
 
       // bind elements
       const negativeBtn = document.getElementById('negative'); // hungarian
@@ -55,14 +65,26 @@
       const positiveBtn = document.getElementById('positive');
       const activeWord = document.getElementById('active-word');
       const activeEntry = document.getElementById('entry');
-      const avoidChars = [' ', '.', ','];
+      const weightProgress = document.getElementById('weight-progress');
+      const nextBtn = document.getElementById('next-entry');
+      const entryWeightInput = document.getElementById('entry-weight');
+      const avoidChars = [' ', '.', ',', ':'];
       const avoidAcronyms = ['US'];
 
       const acronymMap = {
         'US': 'United States',
       };
 
-      console.log(entries);
+      const removeMisc = (entry) => {
+        let newEntry = entry;
+
+        remove.forEach(removeStr => {
+          const regex = new RegExp(removeStr, "g");
+          newEntry = newEntry.replace(regex, '');
+        });
+
+        return newEntry;
+      }
 
       const replaceAcronyms = (entry) => {
         const acronyms = Object.keys(acronymMap);
@@ -88,7 +110,8 @@
 
       const removeDateSent = (entry) => {
         // https://stackoverflow.com/a/69967785/2710227
-        return entry.replaceAll(/\bOn\s+\w+\s+\d{1,2},\s*\d{4}\s*\d{1,2}:\d{1,2}\s*[AP]M,/gi, '');
+        return entry.replaceAll(/On+\s+\w,+\s+\w+\s+\d{1,2},\s*\d{4}\s*\d{1,2}:\d{1,2}\s*[AP]M,/gi, '');
+        // changed to On Fri, Mar 9, 2018, 11:15 PM vs. On Mar 9, 2018, 11:15 PM,
       }
 
       const separateUppercase = (entry) => {
@@ -114,23 +137,15 @@
 
       const cleanEntry = (entry) => {
         let cleanedEntry = entry;
+        cleanedEntry = removeDateSent(cleanedEntry);
         cleanedEntry = checkMailInfoText(entry); // e.g. On Feb 4, 2018 11:00 PM...
-
-        if (entry !== cleanedEntry) { // means some removed
-          cleanedEntry = removeDateSent(cleanedEntry);
-        }
-
+        cleanedEntry = removeMisc(cleanedEntry);
         cleanedEntry = replaceAcronyms(cleanedEntry);
         cleanedEntry = separateUppercase(cleanedEntry);
-
         return cleanedEntry;
       }
 
-      const processWords = () => {
-
-      };
-
-      const processEntries = (entries) => {
+      const loadEntry = (entries) => {
         const entriesKeys = Object.keys(entries);
 
         if (entriesKeys.length > 0) {
@@ -140,11 +155,100 @@
           const activeEntryWords = cleanedEntry.split(' ');
           activeWord.innerText = activeEntryWords[0];
           activeEntry.innerText = cleanedEntry;
+          weightProgress.innerText = `entry 1/${entriesKeys.length}`;
+          entryWeightInput.value = '';
+          entryWeightInput.focus();
         }
       }
 
-      // start the process
-      processEntries(entries);
+      if (1 === 2) {
+        nextBtn.addEventListener('click', () => {
+          const entryWeightValue = entryWeightInput.value;
+
+          // have to enter something
+          if (entryWeightValue !== '') {
+            const firstEntry = Object.keys(entries)[0];
+            weightedEntries[firstEntry] = parseInt(entryWeightValue);
+            localStorage.setItem('weighted-entries', JSON.stringify(weightedEntries));
+            delete entries[firstEntry];
+            localStorage.setItem('entries', JSON.stringify(entries));
+            loadEntry(entries);
+            console.log(localStorage);
+          } else {
+            alert('Please enter a value');
+          }
+        });
+      }
+
+      // loadEntry(entries);
+
+      // dump values into copy-paste row-cols for Excel
+      // SO is so good
+      // https://stackoverflow.com/a/24922761/2710227
+
+      const exportToCsv = (filename, rows) => {
+        var processRow = function (row) {
+          var finalVal = '';
+
+          for (var j = 0; j < row.length; j++) {
+            var innerValue = row[j] === null ? '' : row[j].toString();
+            if (row[j] instanceof Date) {
+              innerValue = row[j].toLocaleString();
+            };
+            var result = innerValue.replace(/"/g, '""');
+            if (result.search(/("|,|\n)/g) >= 0)
+              result = '"' + result + '"';
+            if (j > 0)
+              finalVal += ',';
+            finalVal += result;
+          }
+
+          return finalVal + '\n';
+        };
+
+        var csvFile = '';
+
+        for (var i = 0; i < rows.length; i++) {
+          csvFile += processRow(rows[i]);
+        }
+
+        var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+
+        if (navigator.msSaveBlob) { // IE 10+
+          navigator.msSaveBlob(blob, filename);
+        } else {
+          var link = document.createElement("a");
+
+          if (link.download !== undefined) { // feature detection
+            // Browsers that support HTML5 download attribute
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }
+      }
+
+      const arrayOfWeightedEntries = [
+        ['date','entry weight'],
+      ];
+
+      // 2018-03-02
+      const reformatDate = (ymdDashType) => { // not needed actually just needed to expand column
+        const dateParts = ymdDashType.split('-');
+        return `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+      }
+
+      Object.keys(weightedEntriesFileObj).forEach(entryDate => {
+        arrayOfWeightedEntries.push([
+          reformatDate(entryDate), weightedEntriesFileObj[entryDate]
+        ]);
+      });
+
+      // exportToCsv('weighted-entries.csv', arrayOfWeightedEntries);
       
     </script>
   </body>

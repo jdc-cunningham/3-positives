@@ -1,0 +1,4 @@
+const remove = [
+  'str',
+  'str 2'
+];

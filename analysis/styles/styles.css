@@ -110,3 +110,20 @@ body * {
   background-color: green;
   color: white;
 }
+
+.manual-filter-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.manual-filter-input input {
+  max-width: 70px;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.manual-filter-input button {
+  margin-top: 5px;
+}

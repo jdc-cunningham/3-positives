@@ -44,6 +44,7 @@
       
       let activeTab = 'manual-filter'; // id of tab button
       let processedEntries = 0;
+      let activeEntryWords = []; // fill, unshift as processed
 
       // setup manual filter body
       display.innerHTML = manualFilterHtml; // yes you would not want to do this if stored eg. XSS
@@ -54,33 +55,96 @@
       const positiveBtn = document.getElementById('positive');
       const activeWord = document.getElementById('active-word');
       const activeEntry = document.getElementById('entry');
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const avoidChars = [' ', '.', ','];
+      const avoidAcronyms = ['US'];
 
-      // sample string
-      // On Feb 18, 2018 11:17 PM
+      const acronymMap = {
+        'US': 'United States',
+      };
 
       console.log(entries);
 
-      const findWhichMonth = (entry) => {
-        for (let i = 0; i < months.length; i++) {
-          if (entry.indexOf(`On ${months[i]}`) !== -1) {
-            return months[i];
-            break;
+      const replaceAcronyms = (entry) => {
+        const acronyms = Object.keys(acronymMap);
+        let newEntry = entry;
+
+        acronyms.forEach(acronym => {
+          if (newEntry.indexOf(acronym) !== -1) {
+            const regex = new RegExp(acronym, "g");
+            newEntry = newEntry.replace(regex, acronymMap[acronym]);
           }
-        }
+        })
+
+        return newEntry;
       }
 
-      const preFilterEntry = (entry) => {
+      const checkMailInfoText = (entry) => {
         if (entry.indexOf(filterStrings[0]) !== -1) {
-          const entryMonth = findWhichMonth(entry);
-
+          return entry.split(filterStrings[1]).join('');
         } else {
           return entry;
         }
       }
 
-      // start the process
+      const removeDateSent = (entry) => {
+        // https://stackoverflow.com/a/69967785/2710227
+        return entry.replaceAll(/\bOn\s+\w+\s+\d{1,2},\s*\d{4}\s*\d{1,2}:\d{1,2}\s*[AP]M,/gi, '');
+      }
 
+      const separateUppercase = (entry) => {
+        let newStr = "";
+        const entryChars = entry.split("");
+        const entryCharLength = entryChars.length;
+
+        entryChars.forEach((char, index) => {
+          if (
+            index > 1
+            && avoidChars.indexOf(char) === -1
+            && entry[index -1] !== ' '
+            && char == char.toUpperCase()
+          ) {
+            newStr += ` ${char}`;
+          } else {
+            newStr += char;
+          }
+        });
+
+        return newStr;
+      }
+
+      const cleanEntry = (entry) => {
+        let cleanedEntry = entry;
+        cleanedEntry = checkMailInfoText(entry); // e.g. On Feb 4, 2018 11:00 PM...
+
+        if (entry !== cleanedEntry) { // means some removed
+          cleanedEntry = removeDateSent(cleanedEntry);
+        }
+
+        cleanedEntry = replaceAcronyms(cleanedEntry);
+        cleanedEntry = separateUppercase(cleanedEntry);
+
+        return cleanedEntry;
+      }
+
+      const processWords = () => {
+
+      };
+
+      const processEntries = (entries) => {
+        const entriesKeys = Object.keys(entries);
+
+        if (entriesKeys.length > 0) {
+          const firstEntryKey = entriesKeys[0];
+          const firstEntry = entries[firstEntryKey];
+          const cleanedEntry = cleanEntry(firstEntry);
+          const activeEntryWords = cleanedEntry.split(' ');
+          activeWord.innerText = activeEntryWords[0];
+          activeEntry.innerText = cleanedEntry;
+        }
+      }
+
+      // start the process
+      processEntries(entries);
       
     </script>
   </body>
